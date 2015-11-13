@@ -36,30 +36,29 @@ It will then recreate automatically the timeline for your edited video by compar
 
 # Using the script
 
-run the script from the command line using
+Run the script from the command line using
 python videomatcher.py
-the script will ask you in this order for 
+The script will ask you in this order for 
 - the folder containing the rushes
 - the video file containing side  edited video
 - the name of the video that  will be generated with side by side display of the matching frames
-- the folder in which small images extracted from the rushed will be stored (you need to make sure that the hard drive has
- enough space to store these images)
+- the folder in which small images extracted from the rushed will be stored (you need to make sure that the hard drive has  enough space to store these images)
 
-the scipt will generate:
+The scipt will generate:
 - the video  with side by side display of the matching frames
 - a file timeline.txt that tells you which rush is used in which part of the video
 - matched_frame.pkl , which is binary file used by the script to store matchings frames and matching scores.
 
 # How this works
 
-the script will first run trough all the rush videos in the folder you have provided and will extract one frame every ten frames (3 per seconds if you have videos recoreded at 30fps) and save a low resultion image for each of these frames. The name if each of these images is chosent to correspond to the concatenation of path the rush video, the video name and the frame number. This will will create a database of small images, that can be quite large if you have a lot of rushes.
+The script will first run trough all the rush videos in the folder you have provided and will extract one frame every ten frames (3 per seconds if you have videos recoreded at 30fps) and save a low resultion image for each of these frames. The name if each of these images is chosent to correspond to the concatenation of path the rush video, the video name and the frame number. This will will create a database of small images, that can be quite large if you have a lot of rushes.
 
 Then the scipt will take sequentialy each frame of the edited video and will look for the most similar image in the database of small images. This is done efficently by using an approximate nearest neighboor algorithm that accelerate the search for similar images. 
 Due to the fact that we kept only one frame every 10 frames in the rushes, you can expect only 1 frame every 10 frame of the edited wideo to get a perfect match, which is in general sufficient to reconstruct your timeline.
 
 # Limitations
 
-* it wills not work for frame that have been either rotated, mirrored, or if you have modified the color balance.
+* it wills not work for frames that have been either rotated, mirrored, or if you have modified the color balance.
 This could be improved.
 * the entire set of small images is stored in the RAM during the matching phase, this may be too big if you have a lot of rushes and crash you computer.
 
