@@ -8,11 +8,7 @@ import pickle
 from collections import deque
 import time
 import sklearn.neighbors
-
-
-
-
-
+import Tkinter,tkFileDialog$
 import Tkinter, tkFileDialog
 
 root = Tkinter.Tk()
@@ -21,28 +17,18 @@ if len(rushesFolder ) > 0:
     print "You chose %s" % rushesFolder 
 
 
-# ======== Select a file for opening:
-import Tkinter,tkFileDialog
-
-root = Tkinter.Tk()
 videoFile = tkFileDialog.askopenfilename(parent=root,title='Choose the edited video file')
-
-
-import Tkinter,tkFileDialog
 
 myFormats = [
     ('Mpeg4','*.mp4'),
 ]
 
-root = Tkinter.Tk()
+
 videoResult = tkFileDialog.asksaveasfilename(parent=root,filetypes=myFormats ,title="Save the video with matches")
 
 thumbnails_folder = tkFileDialog.askdirectory(parent=root,initialdir="/",title='Please select the directory in which you want to save the miniaturized videos images')
 if len(thumbnails_folder ) > 0:
     print "You chose %s as the folder where you want to save the small images" % thumbnails_folder 
-
-
-## end of http://code.activestate.com/recipes/438123/ }}}    
 
 assert(rushesFolder!='')
 assert(videoFile!='')
@@ -292,8 +278,6 @@ with open('matched_frame.pkl', 'rb') as f:
     windows_width=15
     prev=-1
    
-
-        
     combined_video=np.dstack((videoTable,bestframes))
    
     keep=np.nonzero((distances[2:-2]<distances[0:-4]) \
@@ -356,8 +340,6 @@ with open('matched_frame.pkl', 'rb') as f:
         chunk['frames'].append(i)
   
     with open('timeline.txt', 'w') as f:
-          
-                      
         
         for chunk in chunks:
             start = np.min(np.array(chunk['frames']))
