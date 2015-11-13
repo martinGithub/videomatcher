@@ -69,5 +69,12 @@ This could be improved.
 * we coudl use temporal coherence and try to fill gaps between found matches by reopening the found rush videos and extracting new frames.
 
 
+# Alternatives
+
+* A the commercial software by yuvsoft (born from research at the Moscow State University Video Group) can be found [here](http://www.yuvsoft.com/2d-technologies/video-matching/)
+*  [http://www.videomatching.eu/](http://www.videomatching.eu/)
+
+
+
 
   
