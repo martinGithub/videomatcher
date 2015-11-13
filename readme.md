@@ -16,8 +16,8 @@ It will then recreate automatically the timeline for your edited video by compar
 
 
 * install the python with packages numpy, matplotlib, scipy, python-opencv ans scikit-learn
- * you can install [winpython](http://winpython.github.io/) or [pytonh(x,y)](http://python-xy.github.io/) that will install python with numpy, matplotlib and scipy.  
- * you can install separetly python and the various packages  
+ * you can install [winpython](http://winpython.github.io/) or [python(x,y)](http://python-xy.github.io/) that will install python with numpy, matplotlib and scipy.  
+ * you can install separately python and the various packages
 * download the zip file of the project and decompress it 
 * double click on *videomatcher.py* (You will have to *register* winpython as explained on its installation guide it to be able to launch the script by double clicking on it)
 
@@ -30,7 +30,10 @@ It will then recreate automatically the timeline for your edited video by compar
 
 ## ubuntu
 
-* install the python packages numpy, matplotlib, scipy, python-opencv ans scikit-learn
+* install python-opencv and the python requirements:
+
+    pip install -r requirements.txt
+
 * download the zip file of the project and decompress it 
 * in the terminal, move in the decompressed folder and type *python videomatcher.py*
 
