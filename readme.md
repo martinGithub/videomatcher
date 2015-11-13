@@ -43,7 +43,7 @@ the script will ask you in this order for
  enough space to store these images)
 
 the scipt will generate:
-- the video that  will be generated with side by side display of the matching frames
+- the video  with side by side display of the matching frames
 - a file timeline.txt that tells you which rush is used in which part of the video
 - matched_frame.pkl , which is binary file used by the script to store matchings frames and matching scores.
 
