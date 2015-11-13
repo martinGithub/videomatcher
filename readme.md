@@ -7,6 +7,8 @@ It assume that you have both
 
 It will then recreate automatically the timeline by comparing each frame of the edited video with all the frames in the rush and create a movie with both a low resultion version of the edited video and the found corresponding frames in the rush, with the path to the rush video,its name and the frame number as shown below.
 
+![alt tag](https://raw.github.com/martinGithub/videomatcher/master/example.png)
+
 # Install
 
 ## windows
