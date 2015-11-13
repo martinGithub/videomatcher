@@ -7,19 +7,19 @@ It assume that you have both
 
 It will then recreate automatically the timeline by comparing each frame of the edited video with all the frames in the rush and create a movie with both a low resultion version of the edited video and the found corresponding frames in the rush, with the path to the rush video,its name and the frame number as shown below.
 
-## Install
+# Install
 
-# windows
+## windows
 you need to first to install python 2.7
 http://python.org/ftp/python/2.7.5/python-2.7.5.msi
 
 http://docs.opencv.org/master/d5/de5/tutorial_py_setup_in_windows.html#gsc.tab=0
 
-# mac os
+## mac os
 
-# ubuntu
+## ubuntu
 
-## Using the script
+# Using the script
 
 run the script from the command line using
 python videomatcher.py
