@@ -34,6 +34,7 @@ It will then recreate automatically the timeline for your edited video by compar
 
 * install python-opencv and the python requirements:
 
+        sudo apt-get install python-opencv
         pip install -r requirements.txt
 
 * download the zip file of the project and decompress it 
