@@ -68,8 +68,7 @@ def main():
     except OSError:
         print "cannot create the folder"
 
-    if False:
-
+    if True:
         for i, videoFile in enumerate(videoFiles):
             basename = str.replace(os.path.relpath(videoFile, rushesFolder), '/', '|')
             print 'creating thumbnails for video %s (%d over %d)'%(basename, i+1, len(videoFiles))
