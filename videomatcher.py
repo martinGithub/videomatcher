@@ -8,9 +8,13 @@ import scipy.ndimage
 import pickle
 import time
 import sklearn.neighbors
-import Tkinter, tkFileDialog
+import shutil
 
-def main():
+
+
+def getPathsInteractive():
+    """function to get all the file paths interactively"""
+    import Tkinter, tkFileDialog
     root = Tkinter.Tk()
     rushesFolder = tkFileDialog.askdirectory(parent=root, initialdir="/",
                                              title='Please select the root directory that contains all the rushes')
@@ -22,9 +26,7 @@ def main():
     myFormats = [
         ('Mpeg4', '*.mp4'),
     ]
-
-
-    videoResult = tkFileDialog.asksaveasfilename(parent=root, filetypes=myFormats, title="Save the video with matches")
+    resultFolder = tkFileDialog.askdirectory(parent=root, filetypes=myFormats, title="Where do you want to save the matches results")
 
     thumbnails_folder = tkFileDialog.askdirectory(
         parent=root, initialdir="/",
@@ -36,12 +38,16 @@ def main():
     assert(rushesFolder != '')
     assert(videoFile != '')
     assert(thumbnails_folder != '')
-    assert(videoResult != videoFile)
-    videoFiles = []
+    assert(resultFolder != '')
+    
+    return rushesFolder,videoFile,thumbnails_folder,resultFolder
 
+def findAllRushVideos(rushesFolder):
+    videoFiles=[]
     for root, _dirnames, _filenames in os.walk(rushesFolder):
         videoFiles.extend(glob.glob(root + "/*.mov"))
         videoFiles.extend(glob.glob(root + "/*.MOV"))
+        videoFiles.extend(glob.glob(root + "/*.avi"))
 
     #removing potential symbolic links
     videoFiles2 = []
@@ -54,35 +60,45 @@ def main():
     videoFiles = videoFiles2
 
     print 'found '+str(len(videoFiles)) +' videos'
-    names = []
-    for f in videoFiles:
-        names.append(os.path.basename(f))
+ 
+    return videoFiles
 
-    #if len(set(names))<len(names):
-        #print 'several videos with same name, not handeled yet'
-        #duplicates = set([x for x in names if names.count(x) > 1])
-        #raise
 
+def createAllThumbnails(thumbnails_folder,rushesFolder,videoFiles):
     try:
         os.mkdir(thumbnails_folder)
     except OSError:
         print "cannot create the folder"
+    
+    for i, videoFile in enumerate(videoFiles):
+        basename = str.replace(os.path.relpath(videoFile, rushesFolder), '/', '|')
+        print 'creating thumbnails for video %s (%d over %d)'%(basename, i+1, len(videoFiles))
+        createThumbnails(videoFile, thumbnails_folder, basename=basename, skip=1)    
 
-    if True:
-        for i, videoFile in enumerate(videoFiles):
-            basename = str.replace(os.path.relpath(videoFile, rushesFolder), '/', '|')
-            print 'creating thumbnails for video %s (%d over %d)'%(basename, i+1, len(videoFiles))
-            createThumbnails(videoFile, thumbnails_folder, basename=basename, skip=1)
-    if True:
-        bestframes, distances, _distancesMatrix = retrieveImages(videoFile, thumbnails_folder)
-        with open('matched_frame.pkl', 'wb') as f:
-            d = dict()
-            d['bestframes'] = bestframes
-            d['distances'] = distances#
-            d['distancesMatrix'] = None#distancesMatrix
-            pickle.dump(d, f)
+def main(rushesFolder,videoFile,thumbnails_folder,resultFolder):
+    
+    videoResult=os.path.join(resultFolder,'matches.avi')
+    
+    videoFiles=findAllRushVideos(rushesFolder)
+    
+    createAllThumbnails(thumbnails_folder,rushesFolder,videoFiles)
 
-    with open('matched_frame.pkl', 'rb') as f:
+
+
+
+    
+    bestframes, distances, _distancesMatrix,distancetosecondbest = retrieveImages(videoFile, thumbnails_folder)
+    
+    #save matches and scores into a binary file
+    with open(os.path.join(resultFolder,'matched_frame.pkl'), 'wb') as f:
+        d = dict()
+        d['bestframes'] = bestframes
+        d['distances'] = distances#
+        d['distancetosecondbest']=distancetosecondbest
+        d['distancesMatrix'] = None#distancesMatrix
+        pickle.dump(d, f)
+
+    with open(os.path.join(resultFolder,'matched_frame.pkl'), 'rb') as f:
 
         d = pickle.load(f)
         plt.figure()
@@ -96,6 +112,7 @@ def main():
         #
         bestframes = database[d['bestframes'], :, :]
         distances = np.mean(np.abs(videoTable-bestframes), axis=(1, 2))
+        distancetosecondbest=d['distancetosecondbest']
         movienames = []
         idframes = []
 
@@ -103,7 +120,7 @@ def main():
             idframes.append(int(im[-12:-4]))
             movienames.append(im[len(thumbnails_folder)+1:-18])
 
-        with open('all_frames.txt', 'w') as f:
+        with open(os.path.join(resultFolder,'all_frames.txt'), 'w') as f:
             #i=1
             #f.write('frame %d : %s at frame %d'%(i, movienames[i], idframes[i]))
             for i in range(d['bestframes'].size):
@@ -113,11 +130,15 @@ def main():
         # keep local minima
         combined_video = np.dstack((videoTable, bestframes))
 
-        keep = np.nonzero((distances[2:-2] < distances[0:-4]) \
-                        & (distances[2:-2] < distances[1:-3])
-                        & (distances[2:-2] < distances[3:-1])
-                        & (distances[2:-2] < distances[4:])
-                        & (distances[2:-2] < 15))[0]+2
+
+
+        #keep = np.nonzero((distances[2:-2] < distances[0:-4]) \
+                        #& (distances[2:-2] < distances[1:-3])
+                        #& (distances[2:-2] < distances[3:-1])
+                        #& (distances[2:-2] < distances[4:])
+                        #& (distances[2:-2] < 15))[0]+2
+                        
+        keep=np.nonzero(distancetosecondbest>1.2*distances)[0]# keep only frame which have a smaller error that second best by some ratio
 
         keepbool = np.zeros(distances.shape, dtype=np.bool)
         keepbool[keep] = True
@@ -125,7 +146,7 @@ def main():
         new_size = (combined_video.shape[2]*zoom_factor, combined_video.shape[1]*zoom_factor+20)
 
 
-        video_writer = cv2.VideoWriter(videoResult, cv2.cv.FOURCC(*"XVID"), 25, new_size)
+        video_writer = cv2.VideoWriter(videoResult, cv2.cv.FOURCC(*"MJPG"), 25, new_size)
         if video_writer.isOpened():
             for i in range(combined_video.shape[0]):
                 image = np.vstack((
@@ -161,17 +182,17 @@ def main():
             b = d['bestframes'][i]
             name = movienames[b]
             frame = idframes[b]
-            offset = i-frame
+            offset = i-frame+1
             if (chunk is None) or name != chunk['movie_name']:
 
                 chunk = {'movie_name':name, 'offsets':[], 'frames':[]}
                 chunks.append(chunk)
 
 
-            chunk['offsets'].append(i-frame)
+            chunk['offsets'].append(offset)
             chunk['frames'].append(i)
 
-        with open('timeline.txt', 'w') as f:
+        with open(os.path.join(resultFolder,'timeline.txt'), 'w') as f:
 
             for chunk in chunks:
                 start = np.min(np.array(chunk['frames']))
@@ -183,6 +204,7 @@ def main():
                 )
 
                 f.write(text)
+        return chunks
 
 def createThumbnails(videoFile, thumbnails_folder, reduced_size=(50, 40), basename=None, skip=10):
 
@@ -267,7 +289,7 @@ def loadVideoSmall(videoFile, reduced_size):
             print '%d percent loaded'%(100*idframe/nbframes)
         #compute a descriptor
         #reduce the image to 200 pixels
-        videoTable[idframe-1, :, :] = cv2.resize(gray, reduced_size).astype(np.int16)
+        videoTable[idframe-1, :, :] = cv2.resize(gray, reduced_size,interpolation=cv2.INTER_AREA).astype(np.int16)
     return videoTable
 
 
@@ -302,6 +324,7 @@ def retrieveImages(videoFile, thumbnails_folder, threshold=0.1):
     print "done"
     start = time.clock()
     distancesMatrix = np.zeros((nbframes, filtered_database.shape[0]))
+    distancetosecondbest= np.zeros((nbframes), dtype=np.float)
     while(video.isOpened()):
         idframe += 1
 
@@ -314,13 +337,13 @@ def retrieveImages(videoFile, thumbnails_folder, threshold=0.1):
 
         #compute a descriptor
         #reduce the image to 200 pixels
-        small = cv2.resize(gray, reduced_size).astype(np.int16)
+        small = cv2.resize(gray, reduced_size,interpolation=cv2.INTER_AREA).astype(np.int16)
         filtered_small = filter_image(small)
         ## Get nearest neighbours
 
-        distance, bestframe = BT.query(filtered_small[None, :, :].flatten(), k=1)
+        distances, bestframe = BT.query(filtered_small[None, :, :].flatten(), k=2)
         bestframe = bestframe[0, 0]
-        distance = distance[0, 0]/filtered_small[None, :, :].flatten().size
+        distance = distances[0, 0]/filtered_small[None, :, :].flatten().size
         if False:#brute force
             distances = np.mean(np.abs(filtered_database-filtered_small[None, :, :]), axis=(1, 2))
             #distancesMatrix[idframe-1, :] = distances
@@ -335,6 +358,7 @@ def retrieveImages(videoFile, thumbnails_folder, threshold=0.1):
         )
         bestframes[idframe-1] = bestframe
         distancestobest[idframe-1] = distance
+        distancetosecondbest[idframe-1]=distances[0, 1]/filtered_small[None, :, :].flatten().size
         np.hstack((filtered_small, filtered_database[bestframe]))
         combined = np.hstack((small, database[bestframe]))
         iplot.set_data(255-combined)
@@ -342,7 +366,71 @@ def retrieveImages(videoFile, thumbnails_folder, threshold=0.1):
         plt.show()
 
     video.release()
-    return bestframes, distancestobest, distancesMatrix
+    return bestframes, distancestobest, distancesMatrix,distancetosecondbest
+
+
+def test():
+    # create a rush folder
+    rushesFolder='./test/rushes'  
+    
+    os.makedirs(rushesFolder)
+    
+    # create synthetic rushes
+    print "creating synthetic rushes"
+    for i in range(1,4):
+        size=(320,240)
+        videoRush=os.path.join(rushesFolder,'rush%d.avi'%i)
+        video_writer = cv2.VideoWriter(videoRush, cv2.cv.FOURCC(*"MJPG"), 25, size)
+        if video_writer.isOpened():
+            for j in range(1,101):
+                image = np.zeros((size[1],size[0],3),dtype=np.uint8)
+                color = (100, 100, 100)
+                cv2.putText(image,  'rush %d '%(i), (20,100), cv2.FONT_HERSHEY_SIMPLEX,1.1, color, 3, cv2.CV_AA)
+                cv2.putText(image,  'frame %d'%(j), (20,130), cv2.FONT_HERSHEY_SIMPLEX,1.1, color, 3, cv2.CV_AA)
+                video_writer.write(image)   
+        video_writer.release()
+    
+    # create an edited video
+    print "creating synthetic edited video"
+    size=(320,240)
+    videoFile=os.path.join('./test/edited.avi')
+    video_writer = cv2.VideoWriter(videoFile, cv2.cv.FOURCC(*"MJPG"), 25, size)    
+    for i in range(1,4):
+        for j in range(1,101):
+            image = np.zeros((size[1],size[0],3),dtype=np.uint8)
+            color = (100, 100, 100)
+            cv2.putText(image,  'rush %d '%(i), (20,100), cv2.FONT_HERSHEY_SIMPLEX,1.1, color, 3, cv2.CV_AA)
+            cv2.putText(image,  'frame %d'%(j), (20,130), cv2.FONT_HERSHEY_SIMPLEX,1.1, color, 3, cv2.CV_AA)
+            video_writer.write(image)
+    video_writer.release()       
+    # run the algorithm
+    thumbnails_folder='./test/thumbnails'
+    resultFolder='./test'
+    chunks=main(rushesFolder,videoFile,thumbnails_folder,resultFolder)
+    
+    assert(len(chunks)==3)
+    assert np.all(chunks[0]['frames']==np.arange(100))
+    assert(chunks[0]['movie_name']=='rush1.avi')
+    assert(np.all(chunks[0]['offsets']==np.zeros((100))))
+    
+  
+    assert np.all(chunks[1]['frames']==np.arange(100,200))
+    assert(chunks[1]['movie_name']=='rush2.avi')
+    assert(np.all(chunks[0]['offsets']==np.zeros((100))))
+    
+
+    assert np.all(chunks[2]['frames']==np.arange(200,300))
+    assert(chunks[2]['movie_name']=='rush3.avi')
+    assert(np.all(chunks[0]['offsets']==np.zeros((100))))    
+    
+    print chunks
+    shutil.rmtree(rushesFolder)
+
+#import unittest
+#testcase = unittest.FunctionTestCase(test)
 
 if __name__ == "__main__":
-    main()
+    rushesFolder,videoFile,thumbnails_folder,resultFolder=getPathsInteractive()
+    main(rushesFolder,videoFile,thumbnails_folder,resultFolder)
+    
+    #test()
